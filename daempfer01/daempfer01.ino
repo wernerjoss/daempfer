@@ -108,12 +108,13 @@ void loop() {
     // receive command from serial terminal, send 't' to initiate tare operation:
     if (Serial.available() > 0) {
         char inByte = Serial.read();
-        if (inByte == 't') LoadCell.tareNoDelay();
+        if (inByte == 't') {
+          LoadCell.tareNoDelay();
+          // check if last tare operation is complete:
+          if (LoadCell.getTareStatus() == true) {
+              Serial.println("Tare complete");
+          }
+        }
         if (inByte == 'q') exit(0); // ende auf Taste 'q' WJ
-    }
-
-    // check if last tare operation is complete:
-    if (LoadCell.getTareStatus() == true) {
-        Serial.println("Tare complete");
     }
 }

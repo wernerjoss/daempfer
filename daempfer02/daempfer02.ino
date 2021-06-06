@@ -20,7 +20,7 @@
 
 /*
   einfache Testversion, liest Wegsensor auf Analog Input #0 und Kaft vom HX711 in einer Schleife.
-  Die Daten werden ständig im seriellen Monitor ausgegeben, csv Format mit Semikolon ; so lange, bis Taste 'q' gedrückt wird.
+  Die Daten werden in ein Array geschrieben und erst wenn der voll ist im seriellen Monitor ausgegeben, csv Format mit Semikolon ; so lange, bis Taste 'q' gedrückt wird.
 */
 
 #include <HX711_ADC.h>
@@ -29,6 +29,7 @@
 #endif
 
 #define BAUDRATE 115200
+#define MAX_SAMP 100 // mehr geht offenbar nicht wg. Speicherplatz !!
 
 //pins:
 const int HX711_dout = 4; //mcu > HX711 dout pin    aus dammi0.ino WJ
@@ -40,7 +41,22 @@ const int calVal_calVal_eepromAdress = 0;
 const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
 // globals:
 unsigned long t = 0;
-    
+
+/*
+ * 
+*/
+unsigned long ticks[MAX_SAMP];
+float force[MAX_SAMP];
+int distance[MAX_SAMP];
+
+int i = 0;
+int nsamp = 0;
+
+/*
+const int MAX_SIZE = 64;
+char lines [MAX_SAMP] [MAX_SIZE]; // braucht noch mehrSpeicher :-/
+*/
+        
 //HX711 constructor:
 HX711_ADC LoadCell(HX711_dout, HX711_sck);
 
@@ -81,11 +97,15 @@ void setup() {
         Serial.println("!!Sampling rate is higher than specification, check MCU>HX711 wiring and pin designations");
     }
     Serial.println("Beenden mit Taste 'q'");
-    Serial.println("Zeit;Kraft;Weg");
+    //  Serial.println("Zeit;Kraft;Weg");
 }
 
 void loop() {
     static boolean newDataReady = 0;
+    float load;
+    int dist;
+    int k;
+    //  char line[MAX_SIZE];
     
     // check for new data/start next conversion:
     if (LoadCell.update()) newDataReady = true;
@@ -93,27 +113,57 @@ void loop() {
     // get smoothed value from the dataset:
     if (newDataReady) {
         if (millis() > t + serialPrintInterval) {
-            float load = LoadCell.getData();
-            Serial.println(millis());
+            load = LoadCell.getData();
+            dist = analogRead(DIST_SENSOR);
+            t = millis();
+            //  snprintf(lines[i], MAX_SIZE, "%d;%f;%d\n", t, load, dist);
+            //  snprintf(lines[i], MAX_SIZE, "%s", line);
+            ticks[i] = t;
+            force[i] = load;
+            distance[i] = dist;
+            /*
+            Serial.print(millis());
             Serial.print(";");
             Serial.print(load);
             Serial.print(";");
-            int dist = analogRead(DIST_SENSOR);
             Serial.println(dist);
+             */
             newDataReady = 0;
-            t = millis();
+            i++;
+            nsamp = i;
         }
     }
 
+    if (i >= MAX_SAMP) {
+      Serial.println("Zeit;Kraft;Weg");
+      for (k=0;k < MAX_SAMP;k++)  {
+        Serial.print(ticks[k]);
+        Serial.print(";");
+        Serial.print(force[k]);
+        Serial.print(";");
+        Serial.println(distance[k]);
+      }
+      i = 0;  // restart from index 0
+    }
     // receive command from serial terminal, send 't' to initiate tare operation:
     if (Serial.available() > 0) {
         char inByte = Serial.read();
-        if (inByte == 't') LoadCell.tareNoDelay();
-        if (inByte == 'q') exit(0); // ende auf Taste 'q' WJ
-    }
-
-    // check if last tare operation is complete:
-    if (LoadCell.getTareStatus() == true) {
-        Serial.println("Tare complete");
+        if (inByte == 't') {
+          LoadCell.tareNoDelay();
+          // check if last tare operation is complete:
+          if (LoadCell.getTareStatus() == true) {
+              Serial.println("Tare complete");
+          }
+        }
+        if (inByte == 'q') {   // ende auf Taste 'q', vorher Arrays ausgeben
+          for (k=0;k < nsamp;k++)  {
+            Serial.print(ticks[k]);
+            Serial.print(";");
+            Serial.print(force[k]);
+            Serial.print(";");
+            Serial.println(distance[k]);
+          } 
+          exit(0);
+        }
     }
 }
