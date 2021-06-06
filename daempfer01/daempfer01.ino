@@ -29,6 +29,7 @@
 #endif
 
 #define BAUDRATE 115200
+#define MAX_SAMP 256
 
 //pins:
 const int HX711_dout = 4; //mcu > HX711 dout pin    aus dammi0.ino WJ
@@ -40,6 +41,7 @@ const int calVal_calVal_eepromAdress = 0;
 const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
 // globals:
 unsigned long t = 0;
+unsigned i = 0;
     
 //HX711 constructor:
 HX711_ADC LoadCell(HX711_dout, HX711_sck);
@@ -102,9 +104,11 @@ void loop() {
             Serial.println(dist);
             newDataReady = 0;
             t = millis();
+            i++;
         }
     }
 
+    if (i >= MAX_SAMP)  exit(0);  // Ende nach MAX_SAMP Zyklen
     // receive command from serial terminal, send 't' to initiate tare operation:
     if (Serial.available() > 0) {
         char inByte = Serial.read();
