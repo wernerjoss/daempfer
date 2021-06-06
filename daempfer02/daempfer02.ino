@@ -42,9 +42,6 @@ const int serialPrintInterval = 200; //increase value to slow down serial print 
 // globals:
 unsigned long t = 0;
 
-/*
- * 
-*/
 unsigned long ticks[MAX_SAMP];
 float force[MAX_SAMP];
 int distance[MAX_SAMP];
@@ -54,7 +51,7 @@ int nsamp = 0;
 
 /*
 const int MAX_SIZE = 64;
-char lines [MAX_SAMP] [MAX_SIZE]; // braucht noch mehrSpeicher :-/
+char lines [MAX_SAMP] [MAX_SIZE]; // braucht noch mehr Speicher :-/
 */
         
 //HX711 constructor:
