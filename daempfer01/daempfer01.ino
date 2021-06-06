@@ -28,20 +28,24 @@
 #include <EEPROM.h>
 #endif
 
+#define BAUDRATE 115200
+
 //pins:
 const int HX711_dout = 4; //mcu > HX711 dout pin    aus dammi0.ino WJ
 const int HX711_sck = 5; //mcu > HX711 sck pin    aus dammi0.ino WJ
 const int DIST_SENSOR = 0;  // Wegsensor, analog input #0
-
+// constants:
+const unsigned long stabilizingtime = 1000; // tare preciscion can be improved by adding a few seconds of stabilizing time
+const int calVal_calVal_eepromAdress = 0;
+const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
+// globals:
+unsigned long t = 0;
+    
 //HX711 constructor:
 HX711_ADC LoadCell(HX711_dout, HX711_sck);
 
-const int calVal_calVal_eepromAdress = 0;
-unsigned long t = 0;
-const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
-
 void setup() {
-    Serial.begin(9600); delay(10);
+    Serial.begin(BAUDRATE); delay(10);
     Serial.println();
     Serial.println("Starting...");
 
@@ -53,7 +57,6 @@ void setup() {
     //EEPROM.get(calVal_eepromAdress, calibrationValue); // uncomment this if you want to fetch this value from eeprom
 
     LoadCell.begin();
-    unsigned long stabilizingtime = 1000; // tare preciscion can be improved by adding a few seconds of stabilizing time
     boolean _tare = false; //set this to false if you don't want tare to be performed in the next step
     LoadCell.start(stabilizingtime, _tare);
     if (LoadCell.getTareTimeoutFlag()) {
