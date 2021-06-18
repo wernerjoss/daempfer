@@ -116,9 +116,9 @@ void loop() {
         if (millis() > t + serialPrintInterval) {
             load = LoadCell.getData();
             if (load > StartLoad) StartFlag = true;
+            t = millis();
             if (StartFlag) {
               dist = analogRead(DIST_SENSOR);
-              t = millis();
               //  snprintf(lines[i], MAX_SIZE, "%d;%f;%d\n", t, load, dist);
               //  snprintf(lines[i], MAX_SIZE, "%s", line);
               ticks[i] = t;
