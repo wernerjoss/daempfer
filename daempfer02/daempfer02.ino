@@ -131,10 +131,10 @@ void loop() {
               Serial.print(";");
               Serial.println(dist);
                */
-              newDataReady = 0;
               i++;
               nsamp = i;
             }
+            newDataReady = 0;
         }
     }
 
