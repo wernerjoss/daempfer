@@ -39,6 +39,8 @@ const int DIST_SENSOR = 0;  // Wegsensor, analog input #0
 const unsigned long stabilizingtime = 1000; // tare preciscion can be improved by adding a few seconds of stabilizing time
 const int calVal_calVal_eepromAdress = 0;
 const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
+const float StartLoad = 397800.; // ggf. anpassen !
+bool StartFlag = false;
 // globals:
 unsigned long t = 0;
 
@@ -93,6 +95,8 @@ void setup() {
     }    else if (LoadCell.getSPS() > 100) {
         Serial.println("!!Sampling rate is higher than specification, check MCU>HX711 wiring and pin designations");
     }
+    Serial.print("Warten auf Start der Aufzeichnung (Kraft > ");
+    Serial.print(StartLoad);Serial.println(")");
     Serial.println("Beenden mit Taste 'q'");
     //  Serial.println("Zeit;Kraft;Weg");
 }
@@ -111,23 +115,26 @@ void loop() {
     if (newDataReady) {
         if (millis() > t + serialPrintInterval) {
             load = LoadCell.getData();
-            dist = analogRead(DIST_SENSOR);
-            t = millis();
-            //  snprintf(lines[i], MAX_SIZE, "%d;%f;%d\n", t, load, dist);
-            //  snprintf(lines[i], MAX_SIZE, "%s", line);
-            ticks[i] = t;
-            force[i] = load;
-            distance[i] = dist;
-            /*
-            Serial.print(millis());
-            Serial.print(";");
-            Serial.print(load);
-            Serial.print(";");
-            Serial.println(dist);
-             */
-            newDataReady = 0;
-            i++;
-            nsamp = i;
+            if (load > StartLoad) StartFlag = true;
+            if (StartFlag) {
+              dist = analogRead(DIST_SENSOR);
+              t = millis();
+              //  snprintf(lines[i], MAX_SIZE, "%d;%f;%d\n", t, load, dist);
+              //  snprintf(lines[i], MAX_SIZE, "%s", line);
+              ticks[i] = t;
+              force[i] = load;
+              distance[i] = dist;
+              /*
+              Serial.print(millis());
+              Serial.print(";");
+              Serial.print(load);
+              Serial.print(";");
+              Serial.println(dist);
+               */
+              newDataReady = 0;
+              i++;
+              nsamp = i;
+            }
         }
     }
 
