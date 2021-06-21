@@ -24,9 +24,9 @@
 */
 
 #include <HX711_ADC.h>
-#if defined(ESP8266)|| defined(ESP32) || defined(AVR)
+//  #if defined(ESP8266)|| defined(ESP32) || defined(AVR)
 #include <EEPROM.h>
-#endif
+//  #endif
 
 #define BAUDRATE 115200
 #define MAX_SAMP 256
@@ -37,7 +37,7 @@ const int HX711_sck = 5; //mcu > HX711 sck pin    aus dammi0.ino WJ
 const int DIST_SENSOR = 0;  // Wegsensor, analog input #0
 // constants:
 const unsigned long stabilizingtime = 1000; // tare preciscion can be improved by adding a few seconds of stabilizing time
-const int calVal_calVal_eepromAdress = 0;
+const int eepromAdress = 0;
 const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
 // globals:
 unsigned long t = 0;
@@ -61,14 +61,29 @@ void setup() {
     LoadCell.begin();
     boolean _tare = false; //set this to false if you don't want tare to be performed in the next step
     LoadCell.start(stabilizingtime, _tare);
+    /*
     if (LoadCell.getTareTimeoutFlag()) {
         Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
     }    else {
         LoadCell.setCalFactor(calibrationValue); // set calibration factor (float)
         Serial.println("Startup is complete");
     }
+    */
     while (!LoadCell.update());
-    Serial.print("Calibration value: ");
+    
+    #if defined(ESP8266) 
+    EEPROM.begin(512);
+    #endif
+    #if defined(ESP8266)
+    EEPROM.commit();
+    #endif
+    EEPROM.get(eepromAdress, calibrationValue);
+    Serial.print("Calibration Value: ");
+    Serial.print(calibrationValue);
+    Serial.print(" read from EEPROM address: ");
+    Serial.println(eepromAdress);
+    LoadCell.setCalFactor(calibrationValue); // set calibration factor (float)
+    Serial.print("Calibration value from Load Cell: ");
     Serial.println(LoadCell.getCalFactor());
     Serial.print("HX711 measured conversion time ms: ");
     Serial.println(LoadCell.getConversionTime());
@@ -96,13 +111,12 @@ void loop() {
     if (newDataReady) {
         if (millis() > t + serialPrintInterval) {
             float load = LoadCell.getData();
-            Serial.println(millis());
+            Serial.print(millis());
             Serial.print(";");
             Serial.print(load);
             Serial.print(";");
             int dist = analogRead(DIST_SENSOR);
             Serial.println(dist);
-            newDataReady = 0;
             t = millis();
             i++;
         }

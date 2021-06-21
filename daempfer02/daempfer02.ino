@@ -24,9 +24,9 @@
 */
 
 #include <HX711_ADC.h>
-#if defined(ESP8266)|| defined(ESP32) || defined(AVR)
+//  #if defined(ESP8266)|| defined(ESP32) || defined(AVR)
 #include <EEPROM.h>
-#endif
+//  #endif
 
 #define BAUDRATE 115200
 #define MAX_SAMP 100 // mehr geht offenbar nicht wg. Speicherplatz !!
@@ -35,14 +35,17 @@
 const int HX711_dout = 4; //mcu > HX711 dout pin    aus dammi0.ino WJ
 const int HX711_sck = 5; //mcu > HX711 sck pin    aus dammi0.ino WJ
 const int DIST_SENSOR = 0;  // Wegsensor, analog input #0
-// constants:
-const unsigned long stabilizingtime = 1000; // tare preciscion can be improved by adding a few seconds of stabilizing time
-const int calVal_calVal_eepromAdress = 0;
+const int eepromAdress = 0;
+
+// constants (adjust if needed):
+const unsigned long stabilizingtime = 2000; // tare preciscion can be improved by adding a few seconds of stabilizing time
 const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
-const float StartLoad = 397800.; // ggf. anpassen !
-bool StartFlag = false;
+const float StartLoad = 470.; // anpassen !
+const float calVal = 22.75;
+
 // globals:
 unsigned long t = 0;
+bool StartFlag = false;
 
 unsigned long ticks[MAX_SAMP];
 float force[MAX_SAMP];
@@ -60,53 +63,33 @@ char lines [MAX_SAMP] [MAX_SIZE]; // braucht noch mehr Speicher :-/
 HX711_ADC LoadCell(HX711_dout, HX711_sck);
 
 void setup() {
-    Serial.begin(BAUDRATE); delay(10);
-    Serial.println();
-    Serial.println("Starting...");
-
-    float calibrationValue; // calibration value
-    calibrationValue = 22.75; // uncomment this if you want to set this value in the sketch
-    #if defined(ESP8266) || defined(ESP32)
-    //EEPROM.begin(512); // uncomment this if you use ESP8266 and want to fetch this value from eeprom
-    #endif
-    //EEPROM.get(calVal_eepromAdress, calibrationValue); // uncomment this if you want to fetch this value from eeprom
-
-    LoadCell.begin();
-    boolean _tare = false; //set this to false if you don't want tare to be performed in the next step
-    LoadCell.start(stabilizingtime, _tare);
-    if (LoadCell.getTareTimeoutFlag()) {
-        Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
-    }    else {
-        LoadCell.setCalFactor(calibrationValue); // set calibration factor (float)
-        Serial.println("Startup is complete");
-    }
-    while (!LoadCell.update());
-    Serial.print("Calibration value: ");
-    Serial.println(LoadCell.getCalFactor());
-    Serial.print("HX711 measured conversion time ms: ");
-    Serial.println(LoadCell.getConversionTime());
-    Serial.print("HX711 measured sampling rate HZ: ");
-    Serial.println(LoadCell.getSPS());
-    Serial.print("HX711 measured settlingtime ms: ");
-    Serial.println(LoadCell.getSettlingTime());
-    Serial.println("Note that the settling time may increase significantly if you use delay() in your sketch!");
-    if (LoadCell.getSPS() < 7) {
-        Serial.println("!!Sampling rate is lower than specification, check MCU>HX711 wiring and pin designations");
-    }    else if (LoadCell.getSPS() > 100) {
-        Serial.println("!!Sampling rate is higher than specification, check MCU>HX711 wiring and pin designations");
-    }
-    Serial.print("Warten auf Start der Aufzeichnung (Kraft > ");
-    Serial.print(StartLoad);Serial.println(")");
-    Serial.println("Beenden mit Taste 'q'");
-    //  Serial.println("Zeit;Kraft;Weg");
+  Serial.begin(BAUDRATE); delay(10);
+  Serial.println();
+  Serial.println("Starting...");
+  LoadCell.begin();
+  float calibrationValue; // calibration value (see example file "Calibration.ino")
+  calibrationValue = calVal; // uncomment this if you want to set the calibration value in the sketch
+  #if defined(ESP8266) || defined(ESP32)
+  //EEPROM.begin(512); // uncomment this if you use ESP8266/ESP32 and want to fetch the calibration value from eeprom
+  #endif
+  long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
+  boolean _tare = false; //set this to false if you don't want tare to be performed in the next step
+  LoadCell.start(stabilizingtime, _tare);
+  if (LoadCell.getTareTimeoutFlag()) {
+    Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
+    while (1);
+  }
+  else {
+    LoadCell.setCalFactor(calibrationValue); // set calibration value (float)
+    Serial.println("Startup is complete - press 'q' to stop operation.");
+  }
 }
 
 void loop() {
     static boolean newDataReady = 0;
-    float load;
+    float kraft;
     int dist;
     int k;
-    //  char line[MAX_SIZE];
     
     // check for new data/start next conversion:
     if (LoadCell.update()) newDataReady = true;
@@ -114,27 +97,17 @@ void loop() {
     // get smoothed value from the dataset:
     if (newDataReady) {
         if (millis() > t + serialPrintInterval) {
-            load = LoadCell.getData();
-            if (load > StartLoad) StartFlag = true;
+            kraft = LoadCell.getData();
+            if (kraft > StartLoad) StartFlag = true;
             t = millis();
             if (StartFlag) {
               dist = analogRead(DIST_SENSOR);
-              //  snprintf(lines[i], MAX_SIZE, "%d;%f;%d\n", t, load, dist);
-              //  snprintf(lines[i], MAX_SIZE, "%s", line);
               ticks[i] = t;
-              force[i] = load;
+              force[i] = kraft;
               distance[i] = dist;
-              /*
-              Serial.print(millis());
-              Serial.print(";");
-              Serial.print(load);
-              Serial.print(";");
-              Serial.println(dist);
-               */
               i++;
               nsamp = i;
             }
-            newDataReady = 0;
         }
     }
 
