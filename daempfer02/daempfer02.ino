@@ -39,8 +39,8 @@ const int eepromAdress = 0;
 
 // constants (adjust if needed):
 const unsigned long stabilizingtime = 2000; // tare preciscion can be improved by adding a few seconds of stabilizing time
-const int serialPrintInterval = 200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
-const float StartLoad = 470.; // anpassen !
+const int serialPrintInterval = 5;  //  200; //increase value to slow down serial print activity, default = 500 = 0.5 sec, 200 = 5 Hz Abtastrate
+const float StartLoad = 35000.; //  470.; // anpassen !
 const float calVal = 22.75;
 
 // globals:
@@ -73,7 +73,7 @@ void setup() {
   //EEPROM.begin(512); // uncomment this if you use ESP8266/ESP32 and want to fetch the calibration value from eeprom
   #endif
   long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
-  boolean _tare = false; //set this to false if you don't want tare to be performed in the next step
+  boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   LoadCell.start(stabilizingtime, _tare);
   if (LoadCell.getTareTimeoutFlag()) {
     Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
